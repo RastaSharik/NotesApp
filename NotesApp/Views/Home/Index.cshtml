@@ -1,0 +1,234 @@
+﻿@{
+    ViewData["Title"] = "КНИГА САМОПОЗНАНИЯ";
+}
+<link href="~/lib/quill/quill.snow.css" rel="stylesheet" />
+
+<link href="~/lib/fullcalendar/skeleton.css" rel="stylesheet" />
+<link href="~/lib/fullcalendar/themes/forma/theme.css" rel="stylesheet" />
+<link href="~/lib/fullcalendar/themes/forma/palettes/blue.css" rel="stylesheet" />
+
+<style>
+    /* === ГАРАНТИРОВАННАЯ СТИЛИЗАЦИЯ ПОД ДИЗАЙН-СИСТЕМУ FORMA BLUE === */
+    .fc {
+        --fc-border-color: #e2e8f0;
+        --fc-button-bg-color: #ffffff;
+        --fc-button-border-color: #cbd5e1;
+        --fc-button-text-color: #1e293b;
+        --fc-button-hover-bg-color: #f1f5f9;
+        --fc-button-active-bg-color: #3b82f6; /* Синий акцент Forma Blue */
+        --fc-button-active-text-color: #ffffff;
+        --fc-today-bg-color: #eff6ff;
+        font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    }
+
+    /* Красивая рамка вокруг календаря */
+    #calendar {
+        border: 1px solid #e2e8f0;
+        background: #ffffff;
+        border-radius: 12px;
+    }
+
+    /* Кнопки управления в журнальном стиле Forma */
+    .fc .fc-button {
+        padding: 8px 16px;
+        font-size: 14px;
+        font-weight: 500;
+        border-radius: 6px;
+        border: 1px solid var(--fc-button-border-color);
+        background-color: var(--fc-button-bg-color);
+        color: var(--fc-button-text-color);
+        transition: all 0.15s ease;
+        box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+    }
+
+        .fc .fc-button:hover {
+            background-color: var(--fc-button-hover-bg-color);
+            border-color: #94a3b8;
+        }
+
+    /* Активное состояние кнопок (выбранный режим просмотра) */
+    .fc .fc-button-active {
+        background-color: var(--fc-button-active-bg-color) !important;
+        border-color: var(--fc-button-active-bg-color) !important;
+        color: var(--fc-button-active-text-color) !important;
+        font-weight: 600;
+    }
+
+    /* Заголовки дней недели */
+    .fc .fc-col-header-cell {
+        background-color: #f8fafc;
+        padding: 10px 0;
+        font-weight: 600;
+        color: #64748b;
+        border-bottom: 1px solid #e2e8f0;
+    }
+
+    /* Ячейки дней */
+    .fc .fc-daygrid-day {
+        transition: background-color 0.1s ease;
+    }
+
+        .fc .fc-daygrid-day:hover {
+            background-color: #f8fafc;
+        }
+</style>
+
+<div class="container mt-4 position-relative">
+    <!--Секция отображения ЗАМЕТОЧЕК-->
+    <div id="notesSection" class="tab-content-section mx-auto" style="max-width:600px">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h2 class="mb-0">ЗАМЕТОЧКИ</h2>
+            <button type="button" class="btn btn-primary rounded-circle shadow"
+                    style="width: 50px; height: 50px; font-size: 24px; line-height: 1;"
+                    onclick="openCreateModal()" title="Добавить заметку">
+                +
+            </button>
+        </div>
+
+        <!-- ПОЧИНЕНО: Контейнер заметок перенесён внутрь родительского notesSection.
+             Теперь при переключении вкладок заметки будут скрываться вместе с кнопкой Плюс! -->
+        <div id="noteContainer">
+            <div class="text-center text-muted">Загрузка заметок ...</div>
+        </div>
+    </div>
+</div>
+
+
+<!--Секция отображения ЗАДАЧЕК-->
+
+<div id="tasksSection" class="tab-content-section d-none mx-auto" style="max-width: 700px;">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2 class="mb-0">Список задач</h2>
+        <button type="button" class="btn btn-success rounded-circle shadow"
+                style="width: 50px; height: 50px; font-size: 24px; line-height: 1;"
+                onclick="openCreateTaskModal()" title="Добавить задачу">
+            +
+        </button>
+    </div>
+
+    <!-- Контейнер вывода списка задач AJAX-ом -->
+    <div id="taskContainer">
+        <div class="text-center text-muted">Загрузка задач ...</div>
+    </div>
+</div>
+
+<!--Секция отображения КАЛЕНДУРИКА-->
+
+<div id="calendarSection" class="tab-content-section d-none mx-auto" style="max-width: 900px;">
+    <h2 class="mb-4">Календарь дедлайнов</h2>
+    <!-- Контейнер для отрисовки библиотеки FullCalendar -->
+    <div id="calendar" class="bg-white p-3 shadow-sm rounded border"></div>
+</div>
+
+<!--Модальное окно ЗАМЕТОК-->
+<div class="modal fade" id="addNoteModal" tabindex="-1" aria-labelledby="addNoteModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content shadow">
+            <div class="modal-header bg-light">
+                <h5 class="modal-title" id="addNoteModalLabel">ЗАМЭТОЧКА</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Закрыть"></button>
+            </div>
+
+            <div class="modal-body">
+                <input type="hidden" id="noteId" value=""/>
+
+                <div class="mb-3">
+                    <label for="noteTitle" class="form-label fw-bold">Заголовок</label>
+                    <input type="text" id="noteTitle" class="form-control" placeholder="Введите заголовок..." />
+                </div>
+                
+                <div class="mb-3">
+                    <label for="noteContent" class="form-label fw-bold">Текст заметки</label>
+
+                    <div id="toolbar-container">
+                        <span class="ql-formats">
+                            <button class="ql-bold" title="Жирный"></button>
+                            <button class="ql-italic" title="Курсив"></button>
+                            <button class="ql-underline" title="Подчеркнутый"></button>
+                            <button class="ql-strike" title="Зачеркнутый"></button>
+                        </span>
+                        <span class="ql-formats">
+                            <button class="ql-list" value="bullet" title="Обычный список"></button>
+                            <button class="ql-list" value="check" title="Список с чекбоксами"></button>
+                        </span>
+                        <span class="ql-formats">
+                            
+                            <button type="button" id="btn-font-decrease" class="btn p-0 me-1" style="width:28px;height:24px;" title="Уменьшить шрифт">
+                                <small>A-</small>
+                            </button>
+                            <button type="button" id="btn-font-increase" class="btn p-0" style="width:28px;height:24px;" title="Увеличить шрифт">
+                                <b style="font-size:14px;">A+</b>
+                            </button>
+                        </span>
+                    </div>
+
+                    <div id="editor-container" style="height: 200px; font-size: 16px;"></div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Отмена</button>
+                <button type="button" onclick="saveNote()" class="btn btn-primary px-4">Сохранить</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+<!--Модальное окно ЗАДАЧЕК-->
+
+<div class="modal fade" id="addTaskModal" tabindex="-1" aria-labelledby="addTaskModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content shadow">
+            <div class="modal-header bg-light">
+                <h5 class="modal-title" id="addTaskModalLabel">Новая задача</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Закрыть"></button>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="taskId" value="" />
+
+                <div class="mb-3">
+                    <label for="taskTitle" class="form-label fw-bold">Название задачи</label>
+                    <input type="text" id="taskTitle" class="form-control" placeholder="Что нужно сделать?..." />
+                </div>
+
+                <div class="mb-3">
+                    <label for="taskDescription" class="form-label fw-bold">Описание / Детали</label>
+                    <textarea id="taskDescription" class="form-control" rows="3" placeholder="Добавьте подробностей..."></textarea>
+                </div>
+
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <label for="taskDueDate" class="form-label fw-bold">Срок выполнения</label>
+                        <input type="datetime-local" id="taskDueDate" class="form-control" />
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label for="taskPriority" class="form-label fw-bold">Приоритет</label>
+                        <select id="taskPriority" class="form-select">
+                            <option value="0">Низкий</option>
+                            <option value="1" selected>Средний</option>
+                            <option value="2">Высокий</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Отмена</button>
+                <button type="button" onclick="saveTask()" class="btn btn-success px-4">Сохранить</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <!-- Библиотека Quill -->
+    <script src="~/lib/quill/quill.js"></script>
+
+    <!-- Подключение all-in-one файла FullCalendar v7 и локализации строго по путям проекта -->
+    <script src="~/lib/fullcalendar/all/global.js"></script>
+    <script src="~/lib/fullcalendar/locales/ru/global.js"></script>
+
+    <!-- Изолированные скрипты логики -->
+    <script src="~/js/calendar-init.js" asp-append-version="true"></script>
+    <script src="~/js/quill-init.js" asp-append-version="true"></script>
+    <script src="~/js/site.js" asp-append-version="true"></script>
+}
